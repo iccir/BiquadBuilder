@@ -1,0 +1,47 @@
+body {
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+}
+
+#floatr-container {
+    margin-left: auto;
+    margin-right: auto;
+    height: 320px;
+    width: 960px
+}
+
+#controls {
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 40px;
+    width: 960px;
+}
+
+#top-buttons {
+    height: 32px;
+    padding-right: 22px;
+    display: flex;
+    align-items: center;
+}
+
+#ref-main-label {
+    text-align: right;
+    flex: 1;
+}
+
+#ref-gain-label {
+    width: 64px;
+    text-align: right;
+    padding-right: 8px;
+}
+
+#ref-gain {
+    width: 40px;
+}
+
+#filters {
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    flex-flow: row wrap;
+}

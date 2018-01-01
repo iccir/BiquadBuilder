@@ -1,0 +1,50 @@
+
+.BiquadView {
+    width: 290px;
+    padding: 8px;
+    margin: 2px;
+    background-color: #f0f0f0;
+    border: 1px solid #808080;
+
+    border-radius: 4px;
+}
+
+.BiquadView-padding {
+    flex: 1;
+}
+
+.BiquadView-selection {
+    float: right;
+    width: 20px;
+    height: 20px;
+
+    border: 1px solid #c0c0c0;
+    border-radius: 100%;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.BiquadView-selection.selected  {
+    border: 1px solid #008000;
+    background-color: #00a000;
+}
+
+.BiquadView-row {
+    display: flex;
+    flex-order: column;
+    padding-bottom: 2px;
+}
+
+.BiquadView-label {
+    text-align: right;
+    width: 40px;
+    margin-right: 8px;
+}
+
+.BiquadView-range {
+    flex: 1;
+}
+
+.BiquadView-text {
+    margin-left: 8px;
+    width:  80px;
+}

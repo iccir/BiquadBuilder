@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Biquad Builder</title>
+
+<script type="text/javascript" src="ext/lodash.core.min.js"></script>
+<script type="text/javascript" src="ext/eiko.js"></script> 
+<script type="text/javascript" src="ext/flotr2.min.js"></script> 
+
+<script type="text/javascript" src="src/Binding.js"></script>
+<script type="text/javascript" src="src/Biquad.js"></script>
+<script type="text/javascript" src="src/BiquadView.js"></script>
+<script type="text/javascript" src="src/Controller.js"></script>
+
+<link rel="stylesheet" type="text/css" href="css/main.css">
+<link rel="stylesheet" type="text/css" href="css/BiquadView.css">
+
+<script type="text/javascript">
+
+let sController = null;
+
+$.ready(() => {
+    sController = new Controller();
+    sController.loadState();
+    sController.awake();
+});
+
+</script>
+</head>
+
+<body>
+
+<div id="floatr-container"></div>
+<div id="controls">
+    <div id="top-buttons">
+        <button id="add">Add Biquad</button>
+
+        <span id="ref-main-label">Mode:</span>
+        <select id="mode">
+        <option value="compare">Compare to Reference</option>
+        <option value="apply">Apply to Reference</option>
+        <option value="" selected="selected"></option>
+        <option value="webaudio">Compare to WebAudio</option>
+        </select>
+
+        <span id="ref-main-label">Reference Frequency Response:</span>
+        <button id="ref-import">Import</button>
+        <button id="ref-clear">Clear</button>
+        <span id="ref-gain-label">Gain:</span>
+        <input id="ref-gain" type="number" step="0.1">
+    </div>
+    <div id="filters">
+    </div>
+</div>
+
+</body>
+</html>
