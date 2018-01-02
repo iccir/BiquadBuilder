@@ -21,15 +21,17 @@ constructor(biquad, delegate)
     let qText     = $.create("input", { "class": "BiquadView-text",  "type": "text"  });
 
     let removeButton = $.create("button", { "class": "BiquadView-remove"    }, "Remove");
-    let selection    = $.create("div",    { "class": "BiquadView-selection" });
+    
+    let muteSwitch   = $.create("div",    { "class": "BiquadView-mute-switch" }, "M");
+    let soloSwitch   = $.create("div",    { "class": "BiquadView-solo-switch" }, "S");
 
     let typeSelect = $.create("select", { "class": "BiquadView-select" }, [
+        $.create("option", { "value": "peaking"   }, "peaking"),
         $.create("option", { "value": "lowpass"   }, "lowpass" ),
         $.create("option", { "value": "highpass"  }, "highpass"),
         $.create("option", { "value": "bandpass"  }, "bandpass"),
         $.create("option", { "value": "lowshelf"  }, "lowshelf"),
         $.create("option", { "value": "highshelf" }, "highshelf"),
-        $.create("option", { "value": "peaking"   }, "peaking"),
         $.create("option", { "value": "notch"     }, "notch")
     ]);
 
@@ -38,11 +40,11 @@ constructor(biquad, delegate)
         return isNaN(result) ? Binding.Invalid : result;
     }
 
-    function update() {
+    let update = () => {
         if (this.delegate && this.delegate.biquadViewDidUpdate) {
             this.delegate.biquadViewDidUpdate(this);
         }
-    }
+    };
 
     this._bindings = [
         new Binding(this.biquad, "type",      [ typeSelect          ], null,           update.bind(this)),
@@ -53,7 +55,11 @@ constructor(biquad, delegate)
 
     this.element = $.create("div", { "class": "BiquadView" }, [
         $.create("div", { "class": "BiquadView-row" }, [
-            typeSelect, removeButton, $.create("div", { "class": "BiquadView-padding" }), selection
+            typeSelect,
+            removeButton,
+            $.create("div", { "class": "BiquadView-padding" }),
+            muteSwitch,
+            soloSwitch
         ]),
         $.create("div", { "class": "BiquadView-row" }, [
             freqLabel, freqRange, freqText
@@ -66,21 +72,24 @@ constructor(biquad, delegate)
         ])
     ]);
 
-    this.selection = selection
+    this.muteSwitch = muteSwitch;
+    this.soloSwitch = soloSwitch;
+    this._mute = false;
+    this._solo = false;
 
-    $.listen(selection, "click", () => {
-        this.delegate.biquadViewDidSelect(this);
+    $.listen(muteSwitch, "click", () => {
+        this.mute = !this.mute;
+        update();
+    });
+
+    $.listen(soloSwitch, "click", () => {
+        this.solo = !this.solo;
+        update();
     });
 
     $.listen(removeButton, "click", () => {
         this.remove();
     });
-}
-
-
-setSelected(yn)
-{
-    this.selection.classList.toggle("selected", yn);
 }
 
 
@@ -90,6 +99,28 @@ remove()
     if (this.delegate && this.delegate.biquadViewDidRemove) {
         this.delegate.biquadViewDidRemove(this);
     }
+}
+
+set solo(yn)
+{
+    this._solo = yn;
+    this.soloSwitch.classList.toggle("active", yn);
+}
+
+set mute(yn)
+{
+    this._mute = yn;
+    this.muteSwitch.classList.toggle("active", yn);
+}
+
+get solo()
+{
+    return this._solo;
+}
+
+get mute()
+{
+    return this._mute;
 }
 
 

@@ -4,7 +4,7 @@ class Biquad {
 
 constructor()
 {   
-    this.type      = "lowpass";
+    this.type      = "peaking";
     this.frequency = 5000;
     this.Q         = 0.7071;
     this.gain      = 0;
@@ -108,6 +108,33 @@ _computeCoefficients()
         a1 / a0,
         a2 / a0
     ];
+}
+
+
+process(buffer)
+{
+    let x1 = 0;
+    let x2 = 0;
+    let y1 = 0;
+    let y2 = 0;
+
+    let coefficients = this._coefficients;
+
+    let b0 = coefficients[0];
+    let b1 = coefficients[1];
+    let b2 = coefficients[2];
+    let a1 = coefficients[3];
+    let a2 = coefficients[4];
+    
+    for (let i = 0; i < buffer.length; i++) {
+        let x = buffer[i];
+        let y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
+
+        x2 = x1; x1 = x;
+        y2 = y1; y1 = y;
+
+        buffer[i] = y;
+    }
 }
 
 

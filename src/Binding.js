@@ -14,13 +14,17 @@ constructor(object, key, elements, validator, callback)
     this._callback  = callback;
     this._value     = object[key];
 
+    this._ignoredElement = null;
+
     _.each(this._elements, element => {
         function handleChange() {
             let v = element.value
             if (validator) v = validator(v);
 
             if (v !== Binding.Invalid) {
+                this._ignoredElement = element;
                 this.value = v;
+                this._ignoredElement = null;
             }
         }
         
@@ -41,7 +45,9 @@ set value(v)
         this._object[this._key] = v;
 
         _.each(this._elements, element => {
-            element.value = v;
+            if (element != this._ignoredElement) {
+                element.value = v;
+            }
         });
 
         if (this._callback) {

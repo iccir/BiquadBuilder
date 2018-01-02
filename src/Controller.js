@@ -161,15 +161,83 @@ _getFilterFrequencyResponse(frequencyArray)
     let result      = new Float32Array(frequencyArray.length);
 
     _.each(this._views, view => {
-        view.biquad.getFrequencyResponse(frequencyArray, magResponse);
+        if (!view.mute) {
+            view.biquad.getFrequencyResponse(frequencyArray, magResponse);
 
-        for (let i = 0; i < frequencyArray.length; i++) {
-            result[i] += magResponse[i];
+            for (let i = 0; i < frequencyArray.length; i++) {
+                result[i] += magResponse[i];
+            }
         }
     });
 
     return result;
 }
+
+
+_playNoise()
+{
+    let sampleRate  = 44100;
+    let sampleCount = 2 * sampleRate;
+
+    if (!sWebAudioContext) {
+        sWebAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    let buffer      = sWebAudioContext.createBuffer(1, sampleCount, sampleRate);
+    let channelData = buffer.getChannelData(0);
+
+    console.time("Noise Generation");
+
+    for (let i = 0; i < sampleCount; i++) {
+        let R1 = Math.random();
+        let R2 = Math.random();
+
+        channelData[i] = Math.sqrt(-2.0 * Math.log(R1)) * Math.cos(2.0 * Math.PI * R2);
+    }
+
+    _.each(this._views, view => {
+        view.biquad.process(channelData);
+    });
+
+    for (let i = 0; i < 100; i++) {
+        channelData[i]               *= (i / 100);
+        channelData[sampleCount - i] *= 1.0 - (i / 100);
+    }
+
+    console.timeEnd("Noise Generation");
+
+    let source = sWebAudioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(sWebAudioContext.destination);
+
+    // Apply comb filter
+    // let delay = sWebAudioContext.createDelay();
+    // delay.delayTime.value = 1.0 / 256.0;
+    // source.connect(delay)
+    // delay.connect(sWebAudioContext.destination);
+
+    source.start();
+}
+
+
+_importFrequencyResponseString(responseString)
+{
+    let data = [ ];
+
+    _.each(responseString.split("\n"), line => {
+        if (line[0] == "#") return;
+
+        _.each(line.split(/[\t ,]/), component => {
+            let c0 = parseFloat(component);
+            if (c0) data.push(c0);
+        });
+    });
+
+    this._referenceValues = data;
+
+    this._updateGraphAndSave();
+}
+
 
 _updateGraphAndSave()
 {
@@ -229,15 +297,10 @@ _updateGraphAndSave()
     }
 
     _.each(this._views, view => {
-        if (view == this._selectedView) {
+        if (view.solo) {
             let magResponse = new Float32Array(logFrequencyArray.length);
             view.biquad.getFrequencyResponse(logFrequencyArray, magResponse);
             addData(logFrequencyArray, magResponse, "rgba(0, 128, 0, 0.5)");
-
-            view.setSelected(true);
-
-        } else {
-            view.setSelected(false);
         }
     });
 
@@ -262,18 +325,7 @@ awake()
 {
     $.listen($("#ref-import"), "click", () => {
         var responseString = prompt("Enter frequency response data", "");
-
-        let data = [ ];
-
-        _.each(responseString.split("\n"), line => {
-            _.each(line.split(/[\t ,]/), component => {
-                let c0 = parseFloat(component);
-                if (c0) data.push(c0);
-            });
-        });
-
-        this._referenceValues = data;
-        this._updateGraphAndSave();
+        this._importFrequencyResponseString(responseString);
     });
 
     $.listen($("#mode"), "change", () => {
@@ -310,26 +362,35 @@ awake()
         this._updateGraphAndSave();
     });
 
+    $.listen($("#play"), "click", () => {
+        this._playNoise();
+    });
+
     _.each(this._views, view => {
         $("#filters").appendChild(view.element)
     });
 
-    this._updateGraphAndSave();
-}
 
-biquadViewDidSelect(biquadView)
-{
-    if (this._selectedView == biquadView) {
-        this._selectedView = null;
-    } else {
-        this._selectedView = biquadView;
+    if (window.location.hash.match("#demo") && !this._referenceValues) {
+        $.fetch("./examples/demo.txt", (err, data) => {
+            $("#mode").value = this._mode = "apply";
+            this._importFrequencyResponseString(data);
+        });
+
     }
-
     this._updateGraphAndSave();
 }
 
 biquadViewDidUpdate(biquadView)
 {
+    if (biquadView.solo) {
+        _.each(this._views, view => {
+            if (view.solo && view != biquadView) {
+                view.solo = false;
+            }
+        })
+    }
+
     this._updateGraphAndSave();
 }
 
