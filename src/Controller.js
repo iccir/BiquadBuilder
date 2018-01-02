@@ -11,6 +11,7 @@ constructor()
     this._views   = [ ];
 
     this._referenceGain   = 0;
+    this._referenceRate   = 0;
     this._referenceValues = null;
     this._mode            = "compare";
 }
@@ -20,6 +21,7 @@ loadState()
     let biquads         = null;
     let referenceValues = null;
     let referenceGain   = 0;
+    let referenceRate   = 0;
     let mode            = null;
 
     function load(storage) {
@@ -37,6 +39,7 @@ loadState()
 
         referenceValues = JSON.parse(storage.getItem("reference-values")) || null;
         referenceGain   = JSON.parse(storage.getItem("reference-gain"))   || 0;
+        referenceRate   = JSON.parse(storage.getItem("reference-rate"))   || 0;
         mode            =            storage.getItem("mode")              || null;
     }
 
@@ -56,6 +59,7 @@ loadState()
 
     this._referenceValues = referenceValues;
     this._referenceGain   = referenceGain;
+    this._referenceRate   = referenceRate;
     this._mode            = mode || "compare";
 
     $("#mode").value     = this._mode;
@@ -69,12 +73,14 @@ saveState()
         return [ biquad.type, biquad.frequency, biquad.Q, biquad.gain ];
     });
 
+    let referenceRate   = this._referenceRate;
     let referenceGain   = this._referenceGain;
     let referenceValues = this._referenceValues;
     let mode            = this._mode;
 
     function save(storage) {
         storage.setItem("biquads",          JSON.stringify(biquads));
+        storage.setItem("reference-rate",   JSON.stringify(referenceRate));
         storage.setItem("reference-gain",   JSON.stringify(referenceGain));
         storage.setItem("reference-values", JSON.stringify(referenceValues));
         storage.setItem("mode",             mode);
@@ -144,12 +150,13 @@ _getWebAudioFrequencyResponse(frequencyArray)
     return result;
 }
 
-_getLinFrequencyArray(N)
+_getLinFrequencyArray(N, rate)
 {
+    if (!rate) rate = 44100;
     let result = [ ];
 
     for (let i = 0; i < N; i++) {
-        result[i] = ((i + 0.5) / N) * (44100 / 2);
+        result[i] = ((i + 0.5) / N) * (rate / 2);
     }
 
     return result;
@@ -223,17 +230,28 @@ _playNoise()
 _importFrequencyResponseString(responseString)
 {
     let data = [ ];
+    let referenceRate = 0;
 
     _.each(responseString.split("\n"), line => {
         if (line[0] == "#") return;
 
         _.each(line.split(/[\t ,]/), component => {
-            let c0 = parseFloat(component);
-            if (c0) data.push(c0);
+            if (component.indexOf("=") > 0) {
+                let pair = component.split("=");
+
+                if (pair[0] == "rate") {
+                    referenceRate = parseFloat(pair[1]);
+                }
+
+            } else {
+                let c0 = parseFloat(component);
+                if (!isNaN(c0)) data.push(c0);
+            }
         });
     });
 
     this._referenceValues = data;
+    this._referenceRate   = (referenceRate || 0);
 
     this._updateGraphAndSave();
 }
@@ -267,7 +285,7 @@ _updateGraphAndSave()
 
     } else if (mode == "apply") {
         if (this._referenceValues) {
-            let linFrequencyArray = this._getLinFrequencyArray(this._referenceValues.length);
+            let linFrequencyArray = this._getLinFrequencyArray(this._referenceValues.length, this._referenceRate);
             let referenceGain     = this._referenceGain || 0;
 
             let filterData        = this._getFilterFrequencyResponse(linFrequencyArray);
@@ -281,7 +299,7 @@ _updateGraphAndSave()
 
     } else {
         if (this._referenceValues) {
-            let linFrequencyArray = this._getLinFrequencyArray(this._referenceValues.length);
+            let linFrequencyArray = this._getLinFrequencyArray(this._referenceValues.length, this._referenceRate);
             let referenceGain     = this._referenceGain || 0;
 
             let referenceData = _.map(this._referenceValues, value => {
@@ -313,7 +331,11 @@ _updateGraphAndSave()
             max: 20000,
             scaling: "logarithmic"
         },
-        yaxis: { max: 6, min: -60 },
+        yaxis: {
+            max: 6,
+            min: -30,
+            ticks: [ 6, 3, 0, -3, -6, -9, -12, -15, -18, -21, -24, -27, -30 ]
+        },
         resolution: Math.ceil(window.devicePixelRatio || 1),
         grid: { minorVerticalLines: true }
     });
@@ -342,6 +364,7 @@ awake()
 
     $.listen($("#ref-clear"), "click", () => {
         this._referenceValues = null;
+        this._referenceRate = 0;
         this._referenceGain = 0;
         this._updateGraphAndSave();
     });
@@ -369,7 +392,6 @@ awake()
     _.each(this._views, view => {
         $("#filters").appendChild(view.element)
     });
-
 
     if (window.location.hash.match("#demo") && !this._referenceValues) {
         $.fetch("./examples/demo.txt", (err, data) => {

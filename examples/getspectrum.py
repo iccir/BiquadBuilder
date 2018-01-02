@@ -7,6 +7,7 @@ import numpy as np
 import scipy.signal
 import scipy.fftpack
 import scikits.audiolab as audiolab
+import argparse
 
 
 # From sms-tools (https://github.com/MTG/sms-tools)
@@ -58,27 +59,6 @@ def stftAnal(x, w, N, H) :
         pin += H                                      # advance sound pointer
     return xmX
 
-
-def smooth(x, s):
-    ii = float(len(x))
-
-    max = len(x) - 1
-
-    out = np.zeros(len(x))
-
-    for i in range(0, len(x)):
-        w =  (i / ii) * s
-
-        start = i - w//2
-        end   = (i + w//2) + 1
-
-        if start < 0: start = 0
-        if end   > len(x): end = len(x)
-
-        out[i] = np.average(x[start:end])
-
-    return out
-
 def read_file(path):
     sndfile = audiolab.Sndfile(path)
     frames = sndfile.read_frames(sndfile.nframes, dtype=np.float64)
@@ -88,30 +68,65 @@ def read_file(path):
 
     return frames, sndfile.samplerate
 
+def plot(mX, rate):
+    import matplotlib.pyplot as plt
 
-path = sys.argv[1]
+    plt.grid(True)
+    plt.xscale("log")
 
-if (os.path.isdir(path)):
-    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) ]
-else:
-    files = [ path ]
+    plt.xticks( np.concatenate((
+        np.arange(10,   100,   step=10),
+        np.arange(100,  1000,  step=100),
+        np.arange(1000, 10000, step=1000), 
+        [ 10000 ],
+        [ 20000 ]
+    )) )
+
+    n = len(mX)
+    k = np.arange(n)
+    T = n/(rate/2.0)
+    frq = k / T
+
+    plt.plot(frq, mX)
+    plt.show()
+  
+
+parser = argparse.ArgumentParser(description="Perform a STFT of the input and output average magnitude")
+parser.add_argument("file", nargs="+", help="the input files or directories")
+parser.add_argument('--size',    dest="size",    default=4096, help="The FFT size, defaults to 4096")
+parser.add_argument('--overlap', dest="overlap", default=8,    help="The time overlap, defaults to 8 (for 8x)")
+parser.add_argument('--plot',    dest="plot", action="store_const", const=True, help="Show plot")
+
+args = parser.parse_args()
 
 mXs = [ ]
+rate = 0
 
-for file in files:
-    try:
-        frames, rate = read_file(os.path.join(path, file))
-    except:
-        continue
-       
-    N = 4096
+for path in args.file:
+    if (os.path.isdir(path)):
+        files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) ]
+    else:
+        files = [ path ]
 
-    mX = stftAnal(frames, scipy.signal.blackmanharris(N), N, int(N * 0.66))
-    mXs.append( np.average(mX, axis=0) )
+    for file in files:
+        try:
+            file_frames, file_rate = read_file(os.path.join(path, file))
+        except:
+            continue
+        
+        if rate != 0 and file_rate != rate:
+            sys.exit("Files are of different sampling rates.")
+        else:
+            rate = file_rate
+
+        mX = stftAnal(file_frames, scipy.signal.blackmanharris(args.size), args.size, int(args.size * (1.0 / float(args.overlap))))
+        mXs.append( np.average(mX, axis=0) )
 
 mX = np.average(mXs, axis=0)
-mX = smooth(mX, 128)
 mX += -np.max(mX)
 mX = np.round(mX, decimals=2)
 
-print ",".join([ "%s" % y for y in mX])        
+if (args.plot):
+    plot(mX, rate)
+else:
+    print "rate=%d,%s" % ( rate, ",".join([ "%s" % y for y in mX]))
