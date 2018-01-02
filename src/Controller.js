@@ -156,7 +156,7 @@ _getLinFrequencyArray(N, rate)
     let result = [ ];
 
     for (let i = 0; i < N; i++) {
-        result[i] = ((i + 0.5) / N) * (rate / 2);
+        result[i] = (i / (N-1)) * (rate / 2);
     }
 
     return result;
