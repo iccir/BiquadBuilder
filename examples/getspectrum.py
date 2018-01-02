@@ -93,8 +93,9 @@ def plot(mX, rate):
 
 parser = argparse.ArgumentParser(description="Perform a STFT of the input and output average magnitude")
 parser.add_argument("file", nargs="+", help="the input files or directories")
-parser.add_argument('--size',    dest="size",    default=4096, help="The FFT size, defaults to 4096")
-parser.add_argument('--overlap', dest="overlap", default=8,    help="The time overlap, defaults to 8 (for 8x)")
+parser.add_argument('--fft',     dest="fft",     type=int, default=4096,  help="The FFT size, defaults to 4096")
+parser.add_argument('--window',  dest="window",  type=int, default=4001, help="The window size, defaults to 4001")
+parser.add_argument('--overlap', dest="overlap", type=int, default=8,    help="The time overlap, defaults to 8 (for 8x)")
 parser.add_argument('--plot',    dest="plot", action="store_const", const=True, help="Show plot")
 
 args = parser.parse_args()
@@ -119,7 +120,7 @@ for path in args.file:
         else:
             rate = file_rate
 
-        mX = stftAnal(file_frames, scipy.signal.blackmanharris(args.size), args.size, int(args.size * (1.0 / float(args.overlap))))
+        mX = stftAnal(file_frames, scipy.signal.blackmanharris(args.window), args.fft, int(args.window * (1.0 / float(args.overlap))))
         mXs.append( np.average(mX, axis=0) )
 
 mX = np.average(mXs, axis=0)
